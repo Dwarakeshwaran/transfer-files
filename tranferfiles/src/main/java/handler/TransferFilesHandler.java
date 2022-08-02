@@ -1,6 +1,5 @@
 package handler;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Map;
 
@@ -22,7 +21,7 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 	private static final Logger logger = LoggerFactory.getLogger(TransferFilesHandler.class);
 	private static TransferFileService service = new TransferFileService();
 
-	public static void main(String[] args) throws FileNotFoundException, IOException {
+	public static void main(String[] args) throws IOException {
 
 		/*
 		 * Get File job Id from fileConfig Object and redirect it to it's respective
@@ -45,6 +44,11 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 	@Override
 	public Object handleRequest(Map<String, String> input, Context context) {
 
+		/*
+		 * Get File job Id from fileConfig Object and redirect it to it's respective
+		 * service class
+		 */
+
 		String jobId = input.get("file_job_id");
 
 		EntityManager entityManager = getEntityManager();
@@ -52,6 +56,15 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 		FittleFileConfigEntity fileConfig = entityManager.find(FittleFileConfigEntity.class, jobId);
 
 		logger.info("File Config {}", fileConfig);
+
+		if (fileConfig != null)
+			try {
+				service.transferFiles(fileConfig);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		else
+			logger.error("File Config Object is null");
 
 		return null;
 	}

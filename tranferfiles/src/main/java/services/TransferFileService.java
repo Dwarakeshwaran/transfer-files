@@ -1,7 +1,6 @@
 package services;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.slf4j.Logger;
@@ -18,7 +17,7 @@ public class TransferFileService {
 	private static SFTPOperations sftpOperations = new SFTPOperations();
 	private static FTPSOperations ftpsOperations = new FTPSOperations();
 
-	public void transferFiles(FittleFileConfigEntity fileConfig) throws FileNotFoundException, IOException {
+	public void transferFiles(FittleFileConfigEntity fileConfig) throws IOException {
 
 		/*
 		 * 1. Get File from the sourceProtocol by using sourceHostName and sourcePath
@@ -47,7 +46,7 @@ public class TransferFileService {
 
 	}
 
-	private void sendSourceFile(File sourceFile, String targetProtocol, String targetHostName, String targetPath) {
+	private void sendSourceFile(File sourceFile, String targetProtocol, String targetHostName, String targetPath) throws IOException {
 		if (targetProtocol != null && targetHostName != null && targetPath != null) {
 
 			if (targetProtocol.equals(TransferFilesConstant.S3_PROTOCOL))
@@ -61,12 +60,12 @@ public class TransferFileService {
 
 	}
 
-	private File getSourceFile(String sourceProtocol, String sourceHostName, String sourcePath) throws FileNotFoundException, IOException {
+	private File getSourceFile(String sourceProtocol, String sourceHostName, String sourcePath) throws IOException {
 
 		File sourceFile = null;
 
 		if (sourceProtocol != null && sourceHostName != null && sourcePath != null) {
-			
+
 			if (sourceProtocol.equals(TransferFilesConstant.S3_PROTOCOL))
 				sourceFile = s3Operations.getS3SourceFile(sourceHostName, sourcePath);
 			if (sourceProtocol.equals(TransferFilesConstant.SFTP_PROTOCOL))
@@ -77,7 +76,7 @@ public class TransferFileService {
 			return sourceFile;
 
 		} else {
-			
+
 			logger.error("One of the Source Config value is Null");
 			return null;
 		}
