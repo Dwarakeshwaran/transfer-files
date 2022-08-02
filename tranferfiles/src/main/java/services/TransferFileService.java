@@ -1,6 +1,8 @@
 package services;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,11 +18,12 @@ public class TransferFileService {
 	private static SFTPOperations sftpOperations = new SFTPOperations();
 	private static FTPSOperations ftpsOperations = new FTPSOperations();
 
-	public void transferFiles(FittleFileConfigEntity fileConfig) {
+	public void transferFiles(FittleFileConfigEntity fileConfig) throws FileNotFoundException, IOException {
 
 		/*
-		 * Get File from the sourceProtocol by using sourceHostName and sourcePath
+		 * 1. Get File from the sourceProtocol by using sourceHostName and sourcePath
 		 */
+
 		File sourceFile = null;
 
 		String sourceProtocol = fileConfig.getSourceServerProtocol();
@@ -30,7 +33,7 @@ public class TransferFileService {
 		sourceFile = getSourceFile(sourceProtocol, sourceHostName, sourcePath);
 
 		/*
-		 * Send the File to their TargetPath using targetProtocol and targetHostName
+		 * 2. Send the File to their TargetPath using targetProtocol and targetHostName
 		 */
 
 		String targetProtocol = fileConfig.getTargetServerProtocol();
@@ -53,28 +56,32 @@ public class TransferFileService {
 				sftpOperations.sendToSftp(sourceFile, targetHostName, targetPath);
 			if (targetProtocol.equals(TransferFilesConstant.FTPS_PROTOCOL))
 				ftpsOperations.sendToFtps(sourceFile, targetHostName, targetPath);
-		} else {
+		} else
 			logger.error("One of the Target Config value is Null ");
-		}
 
 	}
 
-	private File getSourceFile(String sourceProtocol, String sourceHostName, String sourcePath) {
+	private File getSourceFile(String sourceProtocol, String sourceHostName, String sourcePath) throws FileNotFoundException, IOException {
 
 		File sourceFile = null;
 
 		if (sourceProtocol != null && sourceHostName != null && sourcePath != null) {
+			
 			if (sourceProtocol.equals(TransferFilesConstant.S3_PROTOCOL))
 				sourceFile = s3Operations.getS3SourceFile(sourceHostName, sourcePath);
 			if (sourceProtocol.equals(TransferFilesConstant.SFTP_PROTOCOL))
 				sourceFile = sftpOperations.getSftpSourceFile(sourceHostName, sourcePath);
 			if (sourceProtocol.equals(TransferFilesConstant.FTPS_PROTOCOL))
 				sourceFile = ftpsOperations.getFtpsSourceFile(sourceHostName, sourcePath);
+
+			return sourceFile;
+
 		} else {
+			
 			logger.error("One of the Source Config value is Null");
 			return null;
 		}
-		return sourceFile;
+
 	}
 
 }
