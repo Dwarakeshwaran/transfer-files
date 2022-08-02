@@ -26,7 +26,7 @@ public class FittleFileConfigEntity {
 	public String sourceServerHostName;
 
 	@Column(name = "src_file_path")
-	public String sourceFileName;
+	public String sourceFilePath;
 
 	@Column(name = "trg_server_protocol")
 	public String targetServerProtocol;
@@ -35,10 +35,10 @@ public class FittleFileConfigEntity {
 	public String targetServerHostName;
 
 	@Column(name = "trg_file_path")
-	public String targetFileName;
+	public String targetFilePath;
 
 	@Column(name = "src_archival_path")
-	public String sourceArchivalName;
+	public String sourceArchivalPath;
 
 	@Column(name = "delete_after_suc")
 	public String deleteAfterSuccess;

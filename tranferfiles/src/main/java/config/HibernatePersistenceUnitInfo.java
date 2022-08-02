@@ -1,6 +1,7 @@
 package config;
 
 import java.net.URL;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -11,11 +12,17 @@ import javax.persistence.spi.PersistenceUnitInfo;
 import javax.persistence.spi.PersistenceUnitTransactionType;
 import javax.sql.DataSource;
 
+import org.slf4j.LoggerFactory;
+
+import ch.qos.logback.classic.Logger;
+
 import lombok.ToString;
 
 @ToString
 public class HibernatePersistenceUnitInfo implements PersistenceUnitInfo {
-	
+
+	private static final Logger logger = (Logger) LoggerFactory.getLogger(HibernatePersistenceUnitInfo.class);
+
 	private String persistenceUnitName;
 	private PersistenceUnitTransactionType transactionType = PersistenceUnitTransactionType.RESOURCE_LOCAL;
 	private List<String> managedClassNames;
@@ -65,12 +72,12 @@ public class HibernatePersistenceUnitInfo implements PersistenceUnitInfo {
 
 	@Override
 	public List<String> getMappingFileNames() {
-		return null;
+		return Collections.emptyList();
 	}
 
 	@Override
 	public List<URL> getJarFileUrls() {
-		return null;
+		return Collections.emptyList();
 	}
 
 	@Override
@@ -105,6 +112,7 @@ public class HibernatePersistenceUnitInfo implements PersistenceUnitInfo {
 
 	@Override
 	public void addTransformer(ClassTransformer transformer) {
+		logger.info("ClassTransformer");
 	}
 
 	@Override

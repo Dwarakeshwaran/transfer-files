@@ -17,6 +17,7 @@ import org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl;
 import org.hibernate.jpa.boot.internal.PersistenceUnitInfoDescriptor;
 
 public class FittleEntityManagerFactory{
+	
 
 	private String DB_URL = "jdbc:postgresql://fittle-db.czivym8uhcuy.us-east-1.rds.amazonaws.com:5432/postgres";
 	private String DB_USER_NAME = "fittle_user";
@@ -24,10 +25,6 @@ public class FittleEntityManagerFactory{
 	private Class<Object>[] entityClasses;
 
 	public FittleEntityManagerFactory(Class<Object>[] entityClasses) {
-
-		for (Class<Object> entityClass : entityClasses)
-			System.out.println(entityClass);
-
 		this.entityClasses = entityClasses;
 	}
 
@@ -36,17 +33,13 @@ public class FittleEntityManagerFactory{
 	}
 
 	protected EntityManagerFactory getEntityManagerFactory() {
-		System.out.println(getClass().getSimpleName());
 		PersistenceUnitInfo persistenceUnitInfo = getPersistenceUnitInfo(getClass().getSimpleName());
-
-		System.out.println(persistenceUnitInfo);
 		Map<String, Object> configuration = new HashMap<>();
 		return new EntityManagerFactoryBuilderImpl(new PersistenceUnitInfoDescriptor(persistenceUnitInfo),
 				configuration).build();
 	}
 
 	protected HibernatePersistenceUnitInfo getPersistenceUnitInfo(String name) {
-		System.out.println(name);
 		return new HibernatePersistenceUnitInfo(name, getEntityClassNames(), getProperties());
 	}
 
