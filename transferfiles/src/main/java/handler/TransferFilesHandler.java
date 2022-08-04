@@ -21,7 +21,7 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 	private static final Logger logger = LoggerFactory.getLogger(TransferFilesHandler.class);
 	private static TransferFileService service = new TransferFileService();
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, InterruptedException {
 
 		/*
 		 * Get File job Id from fileConfig Object and redirect it to it's respective
@@ -30,7 +30,7 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 
 		EntityManager entityManager = getEntityManager();
 
-		FittleFileConfigEntity fileConfig = entityManager.find(FittleFileConfigEntity.class, "s3-to-sftp");
+		FittleFileConfigEntity fileConfig = entityManager.find(FittleFileConfigEntity.class, "sftp-to-s3");
 
 		logger.info("File Config {}", fileConfig);
 
@@ -61,6 +61,9 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 			try {
 				service.transferFiles(fileConfig);
 			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		else

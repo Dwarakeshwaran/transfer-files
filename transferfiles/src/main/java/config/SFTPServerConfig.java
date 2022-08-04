@@ -41,6 +41,8 @@ public class SFTPServerConfig {
 
 			KeyProvider key = client.loadKeys("key.ppk");
 			client.authPublickey(username, key);
+//			client.connect("localhost",22);
+//			client.authPassword("foo", "pass");
 			logger.info("Connected to SFTP server {} Successfully!", remoteHost);
 
 			return client;

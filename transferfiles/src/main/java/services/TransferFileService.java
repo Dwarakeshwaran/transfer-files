@@ -17,7 +17,7 @@ public class TransferFileService {
 	private static SFTPOperations sftpOperations = new SFTPOperations();
 	private static FTPSOperations ftpsOperations = new FTPSOperations();
 
-	public void transferFiles(FittleFileConfigEntity fileConfig) throws IOException {
+	public void transferFiles(FittleFileConfigEntity fileConfig) throws IOException, InterruptedException {
 
 		/*
 		 * 1. Get File from the sourceProtocol by using sourceHostName and sourcePath
@@ -60,7 +60,7 @@ public class TransferFileService {
 
 	}
 
-	private File getSourceFile(String sourceProtocol, String sourceHostName, String sourcePath) throws IOException {
+	private File getSourceFile(String sourceProtocol, String sourceHostName, String sourcePath) throws IOException, InterruptedException {
 
 		File sourceFile = null;
 
