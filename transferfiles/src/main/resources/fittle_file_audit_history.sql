@@ -19,3 +19,20 @@ TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS public.fittle_file_audit_history
     OWNER to fittle_user;
+   
+-- SEQUENCE QUERY
+
+-- SEQUENCE: public.fittle_file_audit_history_id_seq
+
+-- DROP SEQUENCE IF EXISTS public.fittle_file_audit_history_id_seq;
+
+CREATE SEQUENCE IF NOT EXISTS public.fittle_file_audit_history_id_seq
+    INCREMENT 1
+    START 1
+    MINVALUE 1
+    MAXVALUE 2147483647
+    CACHE 1
+    OWNED BY fittle_file_audit_history.id;
+
+ALTER SEQUENCE public.fittle_file_audit_history_id_seq
+    OWNER TO fittle_user;
