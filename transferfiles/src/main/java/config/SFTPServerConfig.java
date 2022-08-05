@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,37 +13,54 @@ import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
 import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
+import com.google.gson.Gson;
 
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 import net.schmizz.sshj.userauth.keyprovider.KeyProvider;
+import utils.TransferFilesConstant;
 
 public class SFTPServerConfig {
 
 	private static final Logger logger = LoggerFactory.getLogger(SFTPServerConfig.class);
 
-	public SSHClient getSSHConnection(SSHClient client, String remoteHost, String username)
-			throws IOException {
+	@SuppressWarnings("unchecked")
+	public SSHClient getSSHConnection(SSHClient client, String credentials, String remoteHost) throws IOException {
+
+		String secret = getSecret(credentials);
+		String username = null;
+		String keyString = null;
+
+		Gson gson = new Gson();
+		Map<String, String> secretMap = null;
 
 		try {
-			
+			secretMap = gson.fromJson(secret, Map.class);
+		} catch (Exception e) {
+			logger.error("Wrong secret Key {}", e.getMessage());
+		}
+
+		try {
+
 			client.addHostKeyVerifier(new PromiscuousVerifier());
 			client.connect(remoteHost, 22);
 
-			try (FileOutputStream outputStream = new FileOutputStream(new File("key.ppk"))) {
+			try (FileOutputStream outputStream = new FileOutputStream(
+					new File(TransferFilesConstant.TEMP_FOLDER_PATH + "key.ppk"))) {
 
-				String secret = getSecret();
-				if (secret != null) {
-					byte[] keyBytes = secret.getBytes();
+				if (secretMap != null) {
+
+					username = secretMap.get("username");
+					keyString = secretMap.get("key");
+
+					byte[] keyBytes = keyString.getBytes();
 					outputStream.write(keyBytes);
 				}
 
 			}
 
-			KeyProvider key = client.loadKeys("key.ppk");
+			KeyProvider key = client.loadKeys(TransferFilesConstant.TEMP_FOLDER_PATH + "key.ppk");
 			client.authPublickey(username, key);
-//			client.connect("localhost",22);
-//			client.authPassword("foo", "pass");
 			logger.info("Connected to SFTP server {} Successfully!", remoteHost);
 
 			return client;
@@ -53,9 +71,8 @@ public class SFTPServerConfig {
 
 	}
 
-	public static String getSecret() {
+	private static String getSecret(String secretName) {
 
-		String secretName = "sftpServerKey";
 		String region = "us-east-1";
 
 		AWSSecretsManager client = AWSSecretsManagerClientBuilder.standard().withRegion(region).build();
