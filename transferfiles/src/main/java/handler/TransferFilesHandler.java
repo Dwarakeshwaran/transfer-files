@@ -21,7 +21,7 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 	private static final Logger logger = LoggerFactory.getLogger(TransferFilesHandler.class);
 	private static TransferFileService service = new TransferFileService();
 
-	public static void main(String[] args) throws IOException, InterruptedException {
+	public static void main(String[] args) throws IOException {
 
 		/*
 		 * Get File job Id from fileConfig Object and redirect it to it's respective
@@ -61,9 +61,6 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 			try {
 				service.transferFiles(fileConfig);
 			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		else
