@@ -5,7 +5,6 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
-
 import lombok.Data;
 import lombok.ToString;
 
@@ -14,36 +13,42 @@ import lombok.ToString;
 @Data
 @ToString
 public class FittleFileConfigEntity {
-	
+
 	@Id
 	@Column(name = "file_job_id")
-	public String fileJobId;
+	private String fileJobId;
 
 	@Column(name = "src_server_protocol")
-	public String sourceServerProtocol;
+	private String sourceServerProtocol;
+
+	@Column(name = "src_server_credentials")
+	private String sourceServerCredentials;
 
 	@Column(name = "src_server_host_name")
-	public String sourceServerHostName;
+	private String sourceServerHostName;
 
 	@Column(name = "src_file_path")
-	public String sourceFilePath;
+	private String sourceFilePath;
 
 	@Column(name = "trg_server_protocol")
-	public String targetServerProtocol;
+	private String targetServerProtocol;
+
+	@Column(name = "trg_server_credentials")
+	private String targetServerCredentials;
 
 	@Column(name = "trg_server_host_name")
-	public String targetServerHostName;
+	private String targetServerHostName;
 
 	@Column(name = "trg_file_path")
-	public String targetFilePath;
+	private String targetFilePath;
 
 	@Column(name = "src_archival_path")
-	public String sourceArchivalPath;
+	private String sourceArchivalPath;
 
 	@Column(name = "delete_after_suc")
-	public String deleteAfterSuccess;
+	private String deleteAfterSuccess;
 
 	@Column(name = "file_extension")
-	public String fileExtension;
+	private String fileExtension;
 
 }
