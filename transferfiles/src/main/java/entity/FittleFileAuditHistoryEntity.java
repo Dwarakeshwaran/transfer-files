@@ -13,27 +13,27 @@ import lombok.Data;
 @Table(name = "public.fittle_file_audit_history")
 @Data
 public class FittleFileAuditHistoryEntity {
-	
+
 	@Id
 	@Column(name = "file_job_id")
-	public String fileJobId;
-	
+	private String fileJobId;
+
 	@Column(name = "file_name")
-	public String fileName;
-	
+	private String fileName;
+
 	@Column(name = "file_transfer_status")
-	public String fileTransferStatus;
-	
+	private String fileTransferStatus;
+
 	@Column(name = "processing_start_ts")
-	public Date processingStartTimestamp;
-	
+	private Date processingStartTimestamp;
+
 	@Column(name = "processing_end_ts")
-	public Date processingEndTimestamp;
-	
+	private Date processingEndTimestamp;
+
 	@Column(name = "src_file_arc_status")
-	public String sourceFileArchivalStatus;
-	
+	private String sourceFileArchivalStatus;
+
 	@Column(name = "src_file_del_status")
-	public String sourceFileDeletionStatus;
+	private String sourceFileDeletionStatus;
 
 }
