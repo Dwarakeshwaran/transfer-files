@@ -15,14 +15,20 @@ public class FTPSOperations {
 
 	private static FTPServerConfig ftpConfig = new FTPServerConfig();
 
-	public List<FileInfo> getFtpsSourceFile(String sourceCredentials, String sourceHostName, String sourcePath) {
+	public List<FileInfo> getFtpsSourceFileList(String ftpsCredentials, String ftpsHostName, String ftpsPath) {
 
 		return null;
 
 	}
 
-	public void sendToFtps(List<FileInfo> sourceFile, String targetCredentials, String targetHostName, String targetPath) {
+	public boolean sendToFtps(List<FileInfo> ftpsFile, String ftpsCredentials, String ftpsHostName, String ftpsPath) {
 
+		return false;
+	}
+
+	public void deleteFtpsFiles(String sourceCredentials, String sourceHostName, String sourceArchivalPath) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

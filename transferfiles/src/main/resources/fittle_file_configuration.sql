@@ -56,9 +56,9 @@ INSERT INTO public.fittle_file_configuration
 )
 VALUES 
 (
-	'sftp-to-s3',
-	'SFTP', 'sftpServerKey',  's-52abc61a9b794409b.server.transfer.us-east-1.amazonaws.com', 'sftp-source-files/',
-	'S3', 'internal', 'dwaki-transfer-files', 's3-destination-files/',
+	'sftp-to-sftp',
+	'SFTP', 'externalSftpSecret', 'ec2-44-192-61-234.compute-1.amazonaws.com', 'sftp-source-files/',
+	'SFTP', 'sftpSecret', 's-52abc61a9b794409b.server.transfer.us-east-1.amazonaws.com', 'sftp-destination-files/',
 	'sftp-archived-files/',
 	'Y', '.txt'
 );

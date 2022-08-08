@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 import config.S3Config;
@@ -24,7 +25,7 @@ public class S3Operations {
 
 	private static final Logger logger = LoggerFactory.getLogger(S3Operations.class);
 
-	public List<FileInfo> getS3SourceFile(String sourceCredentials, String sourceBucketName, String sourcePath,
+	public List<FileInfo> getS3SourceFileList(String s3Credentials, String s3BucketName, String s3Path,
 			String fileExtension) throws IOException {
 
 		List<S3ObjectSummary> s3Objects = null;
@@ -33,10 +34,10 @@ public class S3Operations {
 		GetObjectRequest getObjectRequest = null;
 		InputStream s3ObjectStream = null;
 		File s3File = null;
-		AmazonS3 s3Client = new S3Config().getS3Config(sourceCredentials);
+		AmazonS3 s3Client = new S3Config().getS3Config(s3Credentials);
 		List<FileInfo> fileList = new ArrayList<>();
 
-		s3Objects = s3Client.listObjects(sourceBucketName, sourcePath).getObjectSummaries();
+		s3Objects = s3Client.listObjects(s3BucketName, s3Path).getObjectSummaries();
 		s3Objects.sort((a, b) -> a.getLastModified().compareTo(b.getLastModified()));
 
 		for (S3ObjectSummary s3Object : s3Objects) {
@@ -66,7 +67,7 @@ public class S3Operations {
 			if (fileName != null) {
 				try {
 
-					getObjectRequest = new GetObjectRequest(sourceBucketName, key);
+					getObjectRequest = new GetObjectRequest(s3BucketName, key);
 					s3ObjectStream = s3Client.getObject(getObjectRequest).getObjectContent();
 
 				} catch (Exception e) {
@@ -122,9 +123,41 @@ public class S3Operations {
 
 	}
 
-	public void sendToS3(List<FileInfo> sourceFile, String targetCredentials, String targetBucketName,
-			String targetPath) {
-		logger.info("Yet to be Coded {} {} {} {}", targetCredentials, sourceFile, targetBucketName, targetPath);
+	public boolean sendToS3(List<FileInfo> s3FilesList, String s3Credentials, String s3BucketName, String s3Path) {
+		logger.info("Values {} {} {} {}", s3Credentials, s3FilesList, s3BucketName, s3Path);
+
+		AmazonS3 s3Client = new S3Config().getS3Config(s3Credentials);
+
+		int flag = 0;
+
+		String key = null;
+
+		for (FileInfo fileInfo : s3FilesList) {
+
+			try {
+
+				key = s3Path + fileInfo.getFileName();
+
+				PutObjectRequest request = new PutObjectRequest(s3BucketName, key, fileInfo.getFile());
+				s3Client.putObject(request);
+
+				logger.info("Successfully Uploaded file {} to AWS S3 Bucket {}", key, s3BucketName);
+
+			} catch (Exception e) {
+				flag = 1;
+				logger.error("Error while uploading file {} to AWS S3 Bucket {}", key, s3BucketName);
+
+			}
+
+		}
+
+		return flag == 0;
+
+	}
+
+	public void deleteS3Files(String sourceCredentials, String sourceHostName, String sourceArchivalPath) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

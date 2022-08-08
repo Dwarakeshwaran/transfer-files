@@ -15,6 +15,7 @@ import config.FittleEntityManagerFactory;
 import entity.FittleFileAuditHistoryEntity;
 import entity.FittleFileConfigEntity;
 import services.TransferFileService;
+import utils.TransferFilesConstant;
 
 public class TransferFilesHandler implements RequestHandler<Map<String, String>, Object> {
 
@@ -30,7 +31,7 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 
 		EntityManager entityManager = getEntityManager();
 
-		FittleFileConfigEntity fileConfig = entityManager.find(FittleFileConfigEntity.class, "sftp-to-s3");
+		FittleFileConfigEntity fileConfig = entityManager.find(FittleFileConfigEntity.class, "sftp-to-sftp");
 
 		logger.info("File Config {}", fileConfig);
 
@@ -49,7 +50,7 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 		 * service class
 		 */
 
-		String jobId = input.get("file_job_id");
+		String jobId = input.get(TransferFilesConstant.JOB_ID);
 
 		EntityManager entityManager = getEntityManager();
 

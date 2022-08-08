@@ -13,5 +13,6 @@ public class FileInfo {
 	private File file;
 	private String fileName;
 	private Date modifiedDate;
+	private boolean uploadStatus;
 
 }

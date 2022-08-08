@@ -31,37 +31,37 @@ public class SFTPOperations {
 	private static SFTPServerConfig sftpConfig = new SFTPServerConfig();
 
 	@SuppressWarnings("resource")
-	public List<FileInfo> getSftpSourceFile(String sourceCredentials, String sourceHostName, String sourcePath,
+	public List<FileInfo> getSftpSourceFileList(String sftpCredentials, String sftpHostName, String sftpPath,
 			String fileExtension) throws IOException {
 
-		logger.debug("Values {} {} {}", sourceCredentials, sourceHostName, sourcePath);
+		logger.debug("Values {} {} {}", sftpCredentials, sftpHostName, sftpPath);
 
 		List<FileInfo> fileList = new ArrayList<>();
 		SSHClient sshClient = new SSHClient();
 
 		SFTPEngine engine = null;
-		sshClient = sftpConfig.getSSHConnection(sshClient, sourceCredentials, sourceHostName);
+		sshClient = sftpConfig.getSSHConnection(sshClient, sftpCredentials, sftpHostName);
 
 		if (sshClient != null) {
 			if (sshClient.isConnected() && sshClient.isAuthenticated()) {
 
 				/*
-				 * 1. Download all the files from SFTP Source Path to Lambda's /tmp/ Folder
+				 * 1. Download all the files from SFTP sftp Path to Lambda's /tmp/ Folder
 				 */
 
 				engine = new SFTPEngine(sshClient).init();
 				SFTPFileTransfer fileTransfer = new SFTPFileTransfer(engine);
 
-				fileTransfer.download(sourcePath, TransferFilesConstant.TEMP_FOLDER_PATH);
+				fileTransfer.download(sftpPath, TransferFilesConstant.TEMP_FOLDER_PATH);
 
-				logger.info("All files from {} have been downloaded to the /tmp/ folder of Lambda", sourcePath);
+				logger.info("All files from {} have been downloaded to the /tmp/ folder of Lambda", sftpPath);
 
 				/*
 				 * 2. Read the file names from the /tmp/ folder in Lambda and get all the files
 				 * in a File Object and store it in FileInfo list object.
 				 */
 
-				try (Stream<Path> paths = Files.walk(Paths.get(TransferFilesConstant.TEMP_FOLDER_PATH + sourcePath))) {
+				try (Stream<Path> paths = Files.walk(Paths.get(TransferFilesConstant.TEMP_FOLDER_PATH + sftpPath))) {
 					paths.filter(Files::isRegularFile).forEach(filePath -> {
 
 						if (filePath.getFileName().toString().contains(fileExtension)) {
@@ -73,8 +73,8 @@ public class SFTPOperations {
 										BasicFileAttributes.class);
 
 								String fileName = filePath.getFileName().toString();
-								fileTransfer.download(sourcePath + fileName, TransferFilesConstant.TEMP_FOLDER_PATH);
-								logger.info("File {} downloaded to {}", sourcePath + fileName,
+								fileTransfer.download(sftpPath + fileName, TransferFilesConstant.TEMP_FOLDER_PATH);
+								logger.info("File {} downloaded to {}", sftpPath + fileName,
 										TransferFilesConstant.TEMP_FOLDER_PATH);
 
 								fileInfo.setFileName(fileName);
@@ -126,15 +126,21 @@ public class SFTPOperations {
 	}
 
 	@SuppressWarnings("resource")
-	public void sendToSftp(List<FileInfo> sourceFileList, String targetCredentials, String targetHostName,
-			String targetPath) throws IOException {
+	public boolean sendToSftp(List<FileInfo> sftpFileList, String sftpCredentials, String sftpHostName,
+			String sftpPath) throws IOException {
 
-		logger.debug("Values: {} {} {} {}", sourceFileList, targetCredentials, targetHostName, targetPath);
+		logger.debug("Values: {} {} {} {}", sftpFileList, sftpCredentials, sftpHostName, sftpPath);
+
+		int flag = 0;
 
 		SSHClient sshClient = new SSHClient();
 		SFTPEngine engine = null;
 
-		sshClient = sftpConfig.getSSHConnection(sshClient, targetCredentials, targetHostName);
+		try {
+			sshClient = sftpConfig.getSSHConnection(sshClient, sftpCredentials, sftpHostName);
+		} catch (IOException exception) {
+			logger.error("Error occurred while connecting to SFTP Server {}", exception.getMessage());
+		}
 
 		if (sshClient != null && sshClient.isConnected()) {
 			if (sshClient.isAuthenticated()) {
@@ -145,14 +151,16 @@ public class SFTPOperations {
 					SFTPFileTransfer fileTransfer = new SFTPFileTransfer(engine);
 					fileTransfer.setPreserveAttributes(false);
 
-					for (FileInfo fileInfo : sourceFileList) {
-						fileTransfer.upload(fileInfo.getFile().getPath(), targetPath + fileInfo.getFileName());
+					for (FileInfo fileInfo : sftpFileList) {
+						fileTransfer.upload(fileInfo.getFile().getPath(), sftpPath + fileInfo.getFileName());
+
 						logger.info("{} Uploaded", fileInfo.getFileName());
 					}
 
 					engine.close();
 
 				} catch (Exception e) {
+					flag = 1;
 					logger.error("Error occurred while sending file to SFTP Server {}", e.getMessage());
 				} finally {
 					sshClient.close();
@@ -163,6 +171,12 @@ public class SFTPOperations {
 		} else
 			logger.error("SSH is Not connected SSH Client {}", sshClient);
 
+		return flag == 0;
+	}
+
+	public void deleteSftpFiles(String sourceCredentials, String sourceHostName, String sourceArchivalPath) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }
