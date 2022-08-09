@@ -13,11 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
-import config.S3Config;
 import model.FileInfo;
 import utils.TransferFilesConstant;
 
@@ -25,7 +25,7 @@ public class S3Operations {
 
 	private static final Logger logger = LoggerFactory.getLogger(S3Operations.class);
 
-	public List<FileInfo> getS3SourceFileList(String s3Credentials, String s3BucketName, String s3Path,
+	public List<FileInfo> getS3SourceFileList(AmazonS3 s3Client, String s3BucketName, String s3Path,
 			String fileExtension) throws IOException {
 
 		List<S3ObjectSummary> s3Objects = null;
@@ -34,7 +34,7 @@ public class S3Operations {
 		GetObjectRequest getObjectRequest = null;
 		InputStream s3ObjectStream = null;
 		File s3File = null;
-		AmazonS3 s3Client = new S3Config().getS3Config(s3Credentials);
+
 		List<FileInfo> fileList = new ArrayList<>();
 
 		s3Objects = s3Client.listObjects(s3BucketName, s3Path).getObjectSummaries();
@@ -123,10 +123,9 @@ public class S3Operations {
 
 	}
 
-	public boolean sendToS3(List<FileInfo> s3FilesList, String s3Credentials, String s3BucketName, String s3Path) {
-		logger.info("Values {} {} {} {}", s3Credentials, s3FilesList, s3BucketName, s3Path);
+	public boolean sendToS3(List<FileInfo> s3FilesList, AmazonS3 s3Client, String s3BucketName, String s3Path) {
 
-		AmazonS3 s3Client = new S3Config().getS3Config(s3Credentials);
+		logger.info("Values {} {} {} {}", s3Client, s3FilesList, s3BucketName, s3Path);
 
 		int flag = 0;
 
@@ -155,9 +154,23 @@ public class S3Operations {
 
 	}
 
-	public void deleteS3Files(String sourceCredentials, String sourceHostName, String sourceArchivalPath) {
-		// TODO Auto-generated method stub
-		
+	public void deleteS3Files(AmazonS3 s3Client, String s3BucketName, String s3Path, List<FileInfo> s3FilesList) {
+
+		try {
+
+			for (FileInfo fileInfo : s3FilesList) {
+				DeleteObjectRequest deleteObjectRequest = new DeleteObjectRequest(s3BucketName,
+						s3Path + fileInfo.getFileName());
+				s3Client.deleteObject(deleteObjectRequest);
+
+				logger.info("Deleted Files from {}/{}{}", s3BucketName, s3Path, fileInfo.getFileName());
+			}
+
+		} catch (Exception e) {
+			logger.error("Error while deleting the objects from S3 path {} ", s3BucketName + s3Path);
+			logger.error("Exception Message {}", e.getMessage());
+		}
+
 	}
 
 }
