@@ -5,12 +5,23 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import javax.persistence.EntityManager;
+
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.net.ftp.FTPClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.amazonaws.services.s3.AmazonS3;
+
+import config.FTPServerConfig;
+import config.S3Config;
+import config.SFTPServerConfig;
+import entity.FittleFileAuditHistoryEntity;
 import entity.FittleFileConfigEntity;
 import model.FileInfo;
+import net.schmizz.sshj.SSHClient;
+import net.schmizz.sshj.sftp.SFTPFileTransfer;
 import utils.TransferFilesConstant;
 
 public class TransferFileService {
@@ -21,33 +32,55 @@ public class TransferFileService {
 	private static SFTPOperations sftpOperations = new SFTPOperations();
 	private static FTPSOperations ftpsOperations = new FTPSOperations();
 
-	public void transferFiles(FittleFileConfigEntity fileConfig) throws IOException {
+	private static SFTPServerConfig sftpConfig = new SFTPServerConfig();
+	private static FTPServerConfig ftpConfig = new FTPServerConfig();
+
+	private AmazonS3 s3Client = null;
+	private SSHClient sourceSshClient = new SSHClient();
+	private SSHClient targetSshClient = new SSHClient();
+	private SFTPFileTransfer sourceSftpFileTransfer = null;
+	private FTPClient ftpClient = null;
+
+	public void transferFiles(FittleFileConfigEntity fileConfig, String jobId, EntityManager entityManager)
+			throws IOException {
 
 		/*
-		 * 1. Get File from the sourceProtocol by using sourceHostName and sourcePath
+		 * 1. Get Files from the sourceProtocol by using sourceHostName and sourcePath
 		 */
 
 		List<FileInfo> sourceFilesList = null;
 
 		sourceFilesList = getSourceFiles(fileConfig);
 
-		for (FileInfo file : sourceFilesList)
+		for (FileInfo file : sourceFilesList) {
+
 			logger.info("File Info {}", file);
+			file.setJobId(jobId);
+
+		}
 
 		/*
-		 * 2. Send the File to their TargetPath using targetProtocol and targetHostName
+		 * 2. Send the Files to their TargetPath using targetProtocol and targetHostName
 		 */
 
-		if (sourceFilesList != null)
-			sendSourceFiles(fileConfig, sourceFilesList);
-		else
+		boolean sentStatus = false;
+
+		if (sourceFilesList != null) {
+			if (!sourceFilesList.isEmpty())
+				sentStatus = sendSourceFiles(fileConfig, sourceFilesList);
+			else
+				logger.error("Source File List is Empty");
+		} else
 			logger.error("Source File is Null");
 
 		/*
 		 * 3. Archive files in the Archival location
 		 */
 
-		boolean archivalStatus = archiveFiles(fileConfig, sourceFilesList);
+		boolean archivalStatus = false;
+
+		if (sentStatus)
+			archivalStatus = archiveFiles(fileConfig, sourceFilesList);
 
 		/*
 		 * 4. If Archival Done successfully, delete the files from the source location
@@ -55,13 +88,53 @@ public class TransferFileService {
 		String deleteAfterSuccess = fileConfig.getDeleteAfterSuccess();
 
 		if (archivalStatus && deleteAfterSuccess.equals("Y"))
-			deleteSourceFiles(fileConfig);
+			deleteSourceFiles(fileConfig, sourceFilesList);
 
 		/*
-		 * 5. Delete files in the Lambda's /tmp/ folder to free up Lamda's memory
+		 * 5. Delete files in the Lambda's /tmp/ folder to free up Lamda's memory and
+		 * Close the server
 		 */
 
 		cleanTempFolder(TransferFilesConstant.TEMP_FOLDER_PATH);
+
+		if (sourceSshClient != null)
+			sourceSshClient.close();
+
+		if (targetSshClient != null)
+			targetSshClient.close();
+
+		if (ftpClient != null)
+			ftpClient.abort();
+
+		for (FileInfo file : sourceFilesList)
+			logger.info("File Info {}", file);
+
+		storeDataInAuditTable(sourceFilesList, entityManager);
+
+	}
+
+	private void storeDataInAuditTable(List<FileInfo> sourceFilesList, EntityManager entityManager) {
+
+		FittleFileAuditHistoryEntity auditHistory = null;
+
+		for (FileInfo file : sourceFilesList) {
+
+			auditHistory = new FittleFileAuditHistoryEntity();
+
+			entityManager.getTransaction().begin();
+
+			auditHistory.setFileJobId(file.getJobId());
+			auditHistory.setFileName(file.getFileName());
+			auditHistory.setFileTransferStatus(file.getFileTransferStatus());
+			auditHistory.setProcessingStartTimestamp(file.getProcessingStartTimestamp());
+			auditHistory.setProcessingEndTimestamp(file.getProcessingEndTimestamp());
+			auditHistory.setSourceFileArchivalStatus(file.getSourceFileArchivalStatus());
+			auditHistory.setSourceFileDeletionStatus(file.getSourceFileDeletionStatus());
+
+			entityManager.merge(auditHistory);
+			entityManager.getTransaction().commit();
+
+		}
 
 	}
 
@@ -73,84 +146,147 @@ public class TransferFileService {
 		String sourcePath = fileConfig.getSourceFilePath();
 		String fileExtension = fileConfig.getFileExtension();
 
+		logger.info("Getting list of files from {}:{}/{}", sourceProtocol, sourceHostName, sourcePath);
+
 		List<FileInfo> sourceFilesList = null;
 
-		if (sourceProtocol != null && sourceHostName != null && sourcePath != null) {
+		try {
 
-			if (sourceProtocol.equals(TransferFilesConstant.S3_PROTOCOL))
-				sourceFilesList = s3Operations.getS3SourceFileList(sourceCredentials, sourceHostName, sourcePath,
-						fileExtension);
-			if (sourceProtocol.equals(TransferFilesConstant.SFTP_PROTOCOL))
-				sourceFilesList = sftpOperations.getSftpSourceFileList(sourceCredentials, sourceHostName, sourcePath,
-						fileExtension);
-			if (sourceProtocol.equals(TransferFilesConstant.FTPS_PROTOCOL))
-				sourceFilesList = ftpsOperations.getFtpsSourceFileList(sourceCredentials, sourceHostName, sourcePath);
+			if (sourceProtocol != null && sourceHostName != null && sourcePath != null) {
 
-			return sourceFilesList;
+				if (sourceProtocol.equals(TransferFilesConstant.S3_PROTOCOL)) {
 
-		} else {
+					s3Client = new S3Config().getS3Config(sourceCredentials);
 
-			logger.error("One of the Source Config value is Null");
+					sourceFilesList = s3Operations.getS3SourceFileList(s3Client, sourceHostName, sourcePath,
+							fileExtension);
+
+				}
+
+				if (sourceProtocol.equals(TransferFilesConstant.SFTP_PROTOCOL)) {
+
+					sourceSshClient = sftpConfig.getSSHConnection(sourceSshClient, sourceCredentials, sourceHostName);
+					sourceSftpFileTransfer = sftpConfig.getSftpFileTransferConnection(sourceSshClient);
+
+					sourceFilesList = sftpOperations.getSftpSourceFileList(sourceSftpFileTransfer, sourcePath,
+							fileExtension);
+
+				}
+
+				if (sourceProtocol.equals(TransferFilesConstant.FTPS_PROTOCOL)) {
+
+					ftpClient = ftpConfig.getConnection(sourceCredentials, sourceHostName);
+					sourceFilesList = ftpsOperations.getFtpsSourceFileList(ftpClient, sourcePath);
+				}
+
+				return sourceFilesList;
+
+			} else {
+
+				logger.error("One of the Source Config value is Null");
+				return Collections.emptyList();
+			}
+
+		} catch (Exception exception) {
+			logger.error("Error occurred while connecting to {} {}", sourceProtocol, exception.getMessage());
 			return Collections.emptyList();
 		}
 
 	}
 
-	private void sendSourceFiles(FittleFileConfigEntity fileConfig, List<FileInfo> sourceFilesList) throws IOException {
+	private boolean sendSourceFiles(FittleFileConfigEntity fileConfig, List<FileInfo> sourceFilesList)
+			throws IOException {
 
 		String targetProtocol = fileConfig.getTargetServerProtocol();
 		String targetCredentials = fileConfig.getTargetServerCredentials();
 		String targetHostName = fileConfig.getTargetServerHostName();
 		String targetPath = fileConfig.getTargetFilePath();
 
-		if (targetProtocol != null && targetHostName != null && targetPath != null) {
+		logger.info("Sending files to Destination {}:{}/{}", targetProtocol, targetHostName, targetPath);
 
-			if (targetProtocol.equals(TransferFilesConstant.S3_PROTOCOL))
-				s3Operations.sendToS3(sourceFilesList, targetCredentials, targetHostName, targetPath);
-			if (targetProtocol.equals(TransferFilesConstant.SFTP_PROTOCOL))
-				sftpOperations.sendToSftp(sourceFilesList, targetCredentials, targetHostName, targetPath);
-			if (targetProtocol.equals(TransferFilesConstant.FTPS_PROTOCOL))
-				ftpsOperations.sendToFtps(sourceFilesList, targetCredentials, targetHostName, targetPath);
-		} else
-			logger.error("One of the Target Config value is Null ");
+		boolean sentStatus = false;
+
+		try {
+
+			if (targetProtocol != null && targetHostName != null && targetPath != null) {
+
+				if (targetProtocol.equals(TransferFilesConstant.S3_PROTOCOL)) {
+
+					s3Client = new S3Config().getS3Config(targetCredentials);
+					sentStatus = s3Operations.sendToS3(sourceFilesList, s3Client, targetHostName, targetPath);
+
+				}
+
+				if (targetProtocol.equals(TransferFilesConstant.SFTP_PROTOCOL)) {
+
+					SFTPFileTransfer targetSftpFileTransfer = null;
+
+					targetSshClient = sftpConfig.getSSHConnection(targetSshClient, targetCredentials, targetHostName);
+					targetSftpFileTransfer = sftpConfig.getSftpFileTransferConnection(targetSshClient);
+
+					sentStatus = sftpOperations.sendToSftp(sourceFilesList, targetSftpFileTransfer, targetPath);
+
+				}
+
+				if (targetProtocol.equals(TransferFilesConstant.FTPS_PROTOCOL)) {
+
+					ftpClient = ftpConfig.getConnection(targetCredentials, targetHostName);
+					sentStatus = ftpsOperations.sendToFtps(sourceFilesList, ftpClient, targetPath);
+
+				}
+
+			} else
+				logger.error("One of the Target Config value is Null ");
+
+		} catch (Exception exception) {
+			logger.error("Error occurred while connecting to {} {}", targetProtocol, exception.getMessage());
+
+		}
+
+		logger.info("Sent Status {}", sentStatus);
+
+		return sentStatus;
 
 	}
 
-	private boolean archiveFiles(FittleFileConfigEntity fileConfig, List<FileInfo> sourceFilesList) throws IOException {
+	private boolean archiveFiles(FittleFileConfigEntity fileConfig, List<FileInfo> sourceFilesList) {
 
 		String sourceArchivalPath = fileConfig.getSourceArchivalPath();
 		String sourceProtocol = fileConfig.getSourceServerProtocol();
-		String sourceCredentials = fileConfig.getSourceServerCredentials();
 		String sourceHostName = fileConfig.getSourceServerHostName();
+
+		logger.info("Archiving files in {}:{}/{}", sourceProtocol, sourceHostName, sourceArchivalPath);
 
 		boolean archivalStatus = false;
 
 		if (sourceProtocol.equals(TransferFilesConstant.S3_PROTOCOL))
-			archivalStatus = s3Operations.sendToS3(sourceFilesList, sourceCredentials, sourceHostName,
-					sourceArchivalPath);
+			archivalStatus = s3Operations.archiveS3Files(sourceFilesList, s3Client, sourceHostName, sourceArchivalPath);
 		if (sourceProtocol.equals(TransferFilesConstant.SFTP_PROTOCOL))
-			archivalStatus = sftpOperations.sendToSftp(sourceFilesList, sourceCredentials, sourceHostName,
+			archivalStatus = sftpOperations.archiveSftpFiles(sourceFilesList, sourceSftpFileTransfer,
 					sourceArchivalPath);
 		if (sourceProtocol.equals(TransferFilesConstant.FTPS_PROTOCOL))
-			archivalStatus = ftpsOperations.sendToFtps(sourceFilesList, sourceCredentials, sourceHostName,
-					sourceArchivalPath);
+			archivalStatus = ftpsOperations.archiveFtpsFiles(sourceFilesList, ftpClient, sourceArchivalPath);
+
+		logger.info("Archival Status {}", archivalStatus);
 
 		return archivalStatus;
 	}
 
-	private void deleteSourceFiles(FittleFileConfigEntity fileConfig) {
+	private void deleteSourceFiles(FittleFileConfigEntity fileConfig, List<FileInfo> sourceFilesList)
+			throws IOException {
 
-		String sourceArchivalPath = fileConfig.getSourceArchivalPath();
 		String sourceProtocol = fileConfig.getSourceServerProtocol();
-		String sourceCredentials = fileConfig.getSourceServerCredentials();
 		String sourceHostName = fileConfig.getSourceServerHostName();
+		String sourcePath = fileConfig.getSourceFilePath();
+
+		logger.info("Deleting files from Source {}:{}/{}", sourceProtocol, sourceHostName, sourcePath);
 
 		if (sourceProtocol.equals(TransferFilesConstant.S3_PROTOCOL))
-			s3Operations.deleteS3Files(sourceCredentials, sourceHostName, sourceArchivalPath);
+			s3Operations.deleteS3Files(s3Client, sourceHostName, sourcePath, sourceFilesList);
 		if (sourceProtocol.equals(TransferFilesConstant.SFTP_PROTOCOL))
-			sftpOperations.deleteSftpFiles(sourceCredentials, sourceHostName, sourceArchivalPath);
+			sftpOperations.deleteSftpFiles(sourceSshClient, sourcePath, sourceFilesList);
 		if (sourceProtocol.equals(TransferFilesConstant.FTPS_PROTOCOL))
-			ftpsOperations.deleteFtpsFiles(sourceCredentials, sourceHostName, sourceArchivalPath);
+			ftpsOperations.deleteFtpsFiles(ftpClient, sourcePath);
 
 	}
 
@@ -159,6 +295,7 @@ public class TransferFileService {
 		File tempDirectory = new File(tempFolderPath);
 		try {
 			FileUtils.cleanDirectory(tempDirectory);
+			logger.info("All the files inside Lambda's temp folder has been deleted Successfully");
 		} catch (IOException e) {
 			logger.error("Error occurred while deleting the content in Temp Folder.");
 		}

@@ -29,14 +29,16 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 		 * service class
 		 */
 
+		String jobId = "s3-to-s3";
+
 		EntityManager entityManager = getEntityManager();
 
-		FittleFileConfigEntity fileConfig = entityManager.find(FittleFileConfigEntity.class, "sftp-to-sftp");
+		FittleFileConfigEntity fileConfig = entityManager.find(FittleFileConfigEntity.class, jobId);
 
 		logger.info("File Config {}", fileConfig);
 
 		if (fileConfig != null)
-			service.transferFiles(fileConfig);
+			service.transferFiles(fileConfig, jobId, entityManager);
 		else
 			logger.error("File Config Object is null");
 
@@ -60,7 +62,7 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 
 		if (fileConfig != null)
 			try {
-				service.transferFiles(fileConfig);
+				service.transferFiles(fileConfig, jobId, entityManager);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

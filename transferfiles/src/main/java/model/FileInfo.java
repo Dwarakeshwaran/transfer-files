@@ -10,9 +10,14 @@ import lombok.ToString;
 @ToString
 public class FileInfo {
 
+	private String jobId;
 	private File file;
 	private String fileName;
 	private Date modifiedDate;
-	private boolean uploadStatus;
+	private String fileTransferStatus;
+	private Date processingStartTimestamp;
+	private Date processingEndTimestamp;
+	private String sourceFileArchivalStatus;
+	private String sourceFileDeletionStatus;
 
 }

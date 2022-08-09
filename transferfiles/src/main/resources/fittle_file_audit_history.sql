@@ -10,9 +10,9 @@ CREATE TABLE IF NOT EXISTS public.fittle_file_audit_history
     file_transfer_status character varying(10) COLLATE pg_catalog."default" NOT NULL,
     processing_start_ts timestamp without time zone NOT NULL,
     processing_end_ts timestamp without time zone NOT NULL,
-    src_file_arc_status timestamp without time zone NOT NULL,
-    src_file_del_status timestamp without time zone NOT NULL,
-    CONSTRAINT fittle_file_audit_history_pkey PRIMARY KEY (id, file_job_id)
+    src_file_arc_status character varying(10) COLLATE pg_catalog."default" NOT NULL,
+    src_file_del_status character varying(10) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT fittle_file_audit_history_pkey PRIMARY KEY (id)
 )
 
 TABLESPACE pg_default;

@@ -12,5 +12,8 @@ public class TransferFilesConstant {
 	public static final String TEMP_FOLDER_PATH = "tmp/";
 
 	public static final String JOB_ID = "file_job_id";
+	
+	public static final String TRANSFER_SUCCESS = "success";
+	public static final String TRANSFER_FAILED = "failed";
 
 }

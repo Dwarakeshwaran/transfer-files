@@ -16,6 +16,8 @@ import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
 import com.google.gson.Gson;
 
 import net.schmizz.sshj.SSHClient;
+import net.schmizz.sshj.sftp.SFTPEngine;
+import net.schmizz.sshj.sftp.SFTPFileTransfer;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 import net.schmizz.sshj.userauth.keyprovider.KeyProvider;
 import utils.TransferFilesConstant;
@@ -69,6 +71,34 @@ public class SFTPServerConfig {
 			return null;
 		}
 
+	}
+	
+	@SuppressWarnings("resource")
+	public SFTPFileTransfer getSftpFileTransferConnection(SSHClient sshClient) {
+
+		SFTPFileTransfer fileTransfer = null;
+		SFTPEngine engine = null;
+
+		try {
+			if (sshClient != null) {
+				if (sshClient.isConnected() && sshClient.isAuthenticated()) {
+					engine = new SFTPEngine(sshClient).init();
+
+					fileTransfer = new SFTPFileTransfer(engine);
+					fileTransfer.setPreserveAttributes(false);
+
+				} else
+					logger.error("SSH Connection {} SSH Authentication {}", sshClient.isConnected(),
+							sshClient.isAuthenticated());
+
+			} else
+				logger.error("SSH Client Value {}", sshClient);
+		} catch (IOException e) {
+			logger.error("Error while Connecting to SFTPFileTransfer using SFTPEngine {} ", e.getMessage());
+			e.printStackTrace();
+		}
+
+		return fileTransfer;
 	}
 
 	private static String getSecret(String secretName) {

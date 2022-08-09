@@ -3,6 +3,7 @@ package services;
 import java.io.File;
 import java.util.List;
 
+import org.apache.commons.net.ftp.FTPClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,22 +14,24 @@ public class FTPSOperations {
 
 	private static final Logger logger = LoggerFactory.getLogger(FTPSOperations.class);
 
-	private static FTPServerConfig ftpConfig = new FTPServerConfig();
-
-	public List<FileInfo> getFtpsSourceFileList(String ftpsCredentials, String ftpsHostName, String ftpsPath) {
-
+	public List<FileInfo> getFtpsSourceFileList(FTPClient ftpClient, String sourcePath) {
+		// TODO Auto-generated method stub
 		return null;
-
 	}
 
-	public boolean sendToFtps(List<FileInfo> ftpsFile, String ftpsCredentials, String ftpsHostName, String ftpsPath) {
-
+	public boolean sendToFtps(List<FileInfo> sourceFilesList, FTPClient ftpClient, String targetPath) {
+		// TODO Auto-generated method stub
 		return false;
 	}
 
-	public void deleteFtpsFiles(String sourceCredentials, String sourceHostName, String sourceArchivalPath) {
+	public void deleteFtpsFiles(FTPClient ftpClient, String sourcePath) {
 		// TODO Auto-generated method stub
 		
+	}
+
+	public boolean archiveFtpsFiles(List<FileInfo> sourceFilesList, FTPClient ftpClient, String sourceArchivalPath) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
 }
