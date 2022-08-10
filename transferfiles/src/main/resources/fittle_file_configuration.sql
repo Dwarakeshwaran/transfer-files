@@ -66,7 +66,7 @@ VALUES
 -- UPDATE QUERY
 
 UPDATE public.fittle_file_configuration
-SET src_server_credentials = 'sftpSecret',
+SET src_server_host_name = 'ec2-34-234-211-13.compute-1.amazonaws.com',
 update_date = current_timestamp
 WHERE id = 2;
 

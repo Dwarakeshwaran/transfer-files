@@ -19,9 +19,9 @@
 
 		<!-- SFTP Client Dependency-->
 		<dependency>
-			<groupId>com.hierynomus</groupId>
-			<artifactId>sshj</artifactId>
-			<version>0.33.0</version>
+			<groupId>com.jcraft</groupId>
+			<artifactId>jsch</artifactId>
+			<version>0.1.55</version>
 		</dependency>
 
 		<!-- AWS Dependencies -->

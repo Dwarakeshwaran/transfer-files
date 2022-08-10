@@ -28,8 +28,9 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 		 * Get File job Id from fileConfig Object and redirect it to it's respective
 		 * service class
 		 */
+		
 
-		String jobId = "s3-to-s3";
+		String jobId = "sftp-to-sftp";
 
 		EntityManager entityManager = getEntityManager();
 

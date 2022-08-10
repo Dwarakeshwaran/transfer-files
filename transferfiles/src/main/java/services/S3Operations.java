@@ -29,6 +29,8 @@ public class S3Operations {
 	public List<FileInfo> getS3SourceFileList(AmazonS3 s3Client, String s3BucketName, String s3Path,
 			String fileExtension) throws IOException {
 
+		logger.debug("Inside getS3SourceFileList method {} {} {} {}", s3Client, s3BucketName, s3Path, fileExtension);
+
 		List<S3ObjectSummary> s3Objects = null;
 		String key = null;
 		String fileName = null;
@@ -127,7 +129,7 @@ public class S3Operations {
 
 	public boolean sendToS3(List<FileInfo> s3FilesList, AmazonS3 s3Client, String s3BucketName, String s3Path) {
 
-		logger.info("Values {} {} {} {}", s3Client, s3FilesList, s3BucketName, s3Path);
+		logger.debug("Inside sendToS3 method {} {} {} {}", s3Client, s3FilesList, s3BucketName, s3Path);
 
 		int flag = 0;
 
@@ -163,7 +165,7 @@ public class S3Operations {
 
 	public boolean archiveS3Files(List<FileInfo> s3FilesList, AmazonS3 s3Client, String s3BucketName, String s3Path) {
 
-		logger.info("Values {} {} {} {}", s3Client, s3FilesList, s3BucketName, s3Path);
+		logger.debug("Inside archiveS3Files method {} {} {} {}", s3Client, s3FilesList, s3BucketName, s3Path);
 
 		int flag = 0;
 
@@ -173,17 +175,27 @@ public class S3Operations {
 
 			try {
 
-				key = s3Path + fileInfo.getFileName();
+				if (fileInfo.getFileTransferStatus().equals(TransferFilesConstant.TRANSFER_SUCCESS)) {
+					key = s3Path + fileInfo.getFileName();
 
-				PutObjectRequest request = new PutObjectRequest(s3BucketName, key, fileInfo.getFile());
-				s3Client.putObject(request);
+					PutObjectRequest request = new PutObjectRequest(s3BucketName, key, fileInfo.getFile());
+					s3Client.putObject(request);
 
-				fileInfo.setSourceFileArchivalStatus(TransferFilesConstant.TRANSFER_SUCCESS);
+					fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
+					fileInfo.setSourceFileArchivalStatus(TransferFilesConstant.TRANSFER_SUCCESS);
 
-				logger.info("Successfully Uploaded file {} to AWS S3 Bucket {}", key, s3BucketName);
+					logger.info("Successfully Uploaded file {} to AWS S3 Bucket {}", key, s3BucketName);
+				} else {
+					flag = 1;
+					fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
+					fileInfo.setSourceFileArchivalStatus(TransferFilesConstant.TRANSFER_FAILED);
+					logger.error("{} is not uploaded to Destination, the file tranfer status is failed",
+							fileInfo.getFileName());
+				}
 
 			} catch (Exception e) {
 				flag = 1;
+				fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
 				fileInfo.setSourceFileArchivalStatus(TransferFilesConstant.TRANSFER_FAILED);
 				logger.error("Error while uploading file {} to AWS S3 Bucket {}", key, s3BucketName);
 
@@ -197,18 +209,29 @@ public class S3Operations {
 
 	public void deleteS3Files(AmazonS3 s3Client, String s3BucketName, String s3Path, List<FileInfo> s3FilesList) {
 
+		logger.debug("Inside deleteS3Files method {} {} {} {}", s3Client, s3FilesList, s3BucketName, s3Path);
+
 		for (FileInfo fileInfo : s3FilesList) {
 			try {
 
 				DeleteObjectRequest deleteObjectRequest = new DeleteObjectRequest(s3BucketName,
 						s3Path + fileInfo.getFileName());
-				s3Client.deleteObject(deleteObjectRequest);
-				
-				fileInfo.setSourceFileDeletionStatus(TransferFilesConstant.TRANSFER_SUCCESS);
 
-				logger.info("Deleted Files from {}/{}{}", s3BucketName, s3Path, fileInfo.getFileName());
+				if (fileInfo.getSourceFileArchivalStatus().equals(TransferFilesConstant.TRANSFER_SUCCESS)) {
+					s3Client.deleteObject(deleteObjectRequest);
+
+					fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
+					fileInfo.setSourceFileDeletionStatus(TransferFilesConstant.TRANSFER_SUCCESS);
+
+					logger.info("Deleted Files from {}/{}{}", s3BucketName, s3Path, fileInfo.getFileName());
+				} else {
+					fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
+					fileInfo.setSourceFileDeletionStatus(TransferFilesConstant.TRANSFER_FAILED);
+					logger.error("{} is not yet Archived, the archival status is failed", fileInfo.getFileName());
+				}
 
 			} catch (Exception e) {
+				fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
 				fileInfo.setSourceFileDeletionStatus(TransferFilesConstant.TRANSFER_FAILED);
 				logger.error("Error while deleting the objects from S3 path {} ", s3BucketName + s3Path);
 				logger.error("Exception Message {}", e.getMessage());

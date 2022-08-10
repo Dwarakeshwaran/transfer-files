@@ -2,7 +2,6 @@ package config;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.Base64;
 import java.util.Map;
 
@@ -14,12 +13,10 @@ import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
 import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
 import com.google.gson.Gson;
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
 
-import net.schmizz.sshj.SSHClient;
-import net.schmizz.sshj.sftp.SFTPEngine;
-import net.schmizz.sshj.sftp.SFTPFileTransfer;
-import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
-import net.schmizz.sshj.userauth.keyprovider.KeyProvider;
 import utils.TransferFilesConstant;
 
 public class SFTPServerConfig {
@@ -27,7 +24,9 @@ public class SFTPServerConfig {
 	private static final Logger logger = LoggerFactory.getLogger(SFTPServerConfig.class);
 
 	@SuppressWarnings("unchecked")
-	public SSHClient getSSHConnection(SSHClient client, String credentials, String remoteHost) throws IOException {
+	public ChannelSftp getSSHConnection(JSch jsch, String credentials, String remoteHost) {
+
+		logger.debug("Inside getSSHConnection method {} {} {}", jsch, credentials, remoteHost);
 
 		String secret = getSecret(credentials);
 		String username = null;
@@ -44,11 +43,8 @@ public class SFTPServerConfig {
 
 		try {
 
-			client.addHostKeyVerifier(new PromiscuousVerifier());
-			client.connect(remoteHost, 22);
-
 			try (FileOutputStream outputStream = new FileOutputStream(
-					new File(TransferFilesConstant.TEMP_FOLDER_PATH + "key.ppk"))) {
+					new File(TransferFilesConstant.TEMP_FOLDER_PATH + "key.pem"))) {
 
 				if (secretMap != null) {
 
@@ -61,47 +57,29 @@ public class SFTPServerConfig {
 
 			}
 
-			KeyProvider key = client.loadKeys(TransferFilesConstant.TEMP_FOLDER_PATH + "key.ppk");
-			client.authPublickey(username, key);
+			Session jschSession = jsch.getSession(username, remoteHost, 22);
+			java.util.Properties config = new java.util.Properties();
+			config.put("StrictHostKeyChecking", "no");
+			jschSession.setConfig(config);
+			String privateKey = TransferFilesConstant.TEMP_FOLDER_PATH + "key.pem";
+
+			jsch.addIdentity(privateKey);
+
+			jschSession.connect();
+
 			logger.info("Connected to SFTP server {} Successfully!", remoteHost);
 
-			return client;
+			return (ChannelSftp) jschSession.openChannel("sftp");
 		} catch (Exception e) {
 			logger.error("Error Occurred While Connecting to SFTP Server {}", e.getMessage());
 			return null;
 		}
 
 	}
-	
-	@SuppressWarnings("resource")
-	public SFTPFileTransfer getSftpFileTransferConnection(SSHClient sshClient) {
-
-		SFTPFileTransfer fileTransfer = null;
-		SFTPEngine engine = null;
-
-		try {
-			if (sshClient != null) {
-				if (sshClient.isConnected() && sshClient.isAuthenticated()) {
-					engine = new SFTPEngine(sshClient).init();
-
-					fileTransfer = new SFTPFileTransfer(engine);
-					fileTransfer.setPreserveAttributes(false);
-
-				} else
-					logger.error("SSH Connection {} SSH Authentication {}", sshClient.isConnected(),
-							sshClient.isAuthenticated());
-
-			} else
-				logger.error("SSH Client Value {}", sshClient);
-		} catch (IOException e) {
-			logger.error("Error while Connecting to SFTPFileTransfer using SFTPEngine {} ", e.getMessage());
-			e.printStackTrace();
-		}
-
-		return fileTransfer;
-	}
 
 	private static String getSecret(String secretName) {
+
+		logger.debug("Inside getSecret method {}", secretName);
 
 		String region = "us-east-1";
 
