@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS public.fittle_file_audit_history
 (
     id integer NOT NULL DEFAULT nextval('fittle_file_audit_history_id_seq'::regclass),
-    file_job_id character varying(20) COLLATE pg_catalog."default" NOT NULL,
+    file_job_id character varying(50) COLLATE pg_catalog."default" NOT NULL,
     file_name character varying(50) COLLATE pg_catalog."default" NOT NULL,
     file_transfer_status character varying(10) COLLATE pg_catalog."default" NOT NULL,
     processing_start_ts timestamp without time zone NOT NULL,

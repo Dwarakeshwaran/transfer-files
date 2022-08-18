@@ -5,13 +5,13 @@
 CREATE TABLE IF NOT EXISTS public.fittle_file_configuration
 (
     id integer NOT NULL DEFAULT nextval('fittle_file_configuration_id_seq'::regclass),
-    file_job_id character varying(20) COLLATE pg_catalog."default" NOT NULL,
+    file_job_id character varying(50) COLLATE pg_catalog."default" NOT NULL,
     src_server_protocol character varying(5) COLLATE pg_catalog."default" NOT NULL,
-    src_server_credentials character varying(20) COLLATE pg_catalog."default" NOT NULL,
+    src_server_system character varying(20) COLLATE pg_catalog."default" NOT NULL,
     src_server_host_name character varying(100) COLLATE pg_catalog."default" NOT NULL,
     src_file_path character varying(100) COLLATE pg_catalog."default",
     trg_server_protocol character varying(5) COLLATE pg_catalog."default" NOT NULL,
-    trg_server_credentials character varying(20) COLLATE pg_catalog."default" NOT NULL,
+    trg_server_system character varying(20) COLLATE pg_catalog."default" NOT NULL,
     trg_server_host_name character varying(100) COLLATE pg_catalog."default" NOT NULL,
     trg_file_path character varying(100) COLLATE pg_catalog."default",
     src_archival_path character varying(100) COLLATE pg_catalog."default",
@@ -66,7 +66,7 @@ VALUES
 -- UPDATE QUERY
 
 UPDATE public.fittle_file_configuration
-SET src_server_host_name = 'ec2-34-234-211-13.compute-1.amazonaws.com',
+SET src_server_host_name = 'ec2-3-236-177-178.compute-1.amazonaws.com',
 update_date = current_timestamp
 WHERE id = 2;
 
