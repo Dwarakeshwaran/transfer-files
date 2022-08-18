@@ -21,8 +21,8 @@ public class FittleFileConfigEntity {
 	@Column(name = "src_server_protocol")
 	private String sourceServerProtocol;
 
-	@Column(name = "src_server_credentials")
-	private String sourceServerCredentials;
+	@Column(name = "src_server_system")
+	private String sourceServerSystem;
 
 	@Column(name = "src_server_host_name")
 	private String sourceServerHostName;
@@ -33,8 +33,8 @@ public class FittleFileConfigEntity {
 	@Column(name = "trg_server_protocol")
 	private String targetServerProtocol;
 
-	@Column(name = "trg_server_credentials")
-	private String targetServerCredentials;
+	@Column(name = "trg_server_system")
+	private String targetServerSystem;
 
 	@Column(name = "trg_server_host_name")
 	private String targetServerHostName;

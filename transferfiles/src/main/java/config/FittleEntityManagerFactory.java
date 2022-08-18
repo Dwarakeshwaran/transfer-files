@@ -19,6 +19,7 @@ import org.hibernate.jpa.boot.internal.PersistenceUnitInfoDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
@@ -77,7 +78,7 @@ public class FittleEntityManagerFactory {
 	protected DataSource getDataSource() {
 		BasicDataSource dataSource = new BasicDataSource();
 
-		String secret = getSecret(TransferFilesConstant.DB_SECRET);
+		String secret = getSecret(TransferFilesConstant.FITTLE_SECRET);
 
 		Gson gson = new Gson();
 		Map<String, String> secretMap = null;
@@ -106,7 +107,8 @@ public class FittleEntityManagerFactory {
 
 		String region = "us-east-1";
 
-		AWSSecretsManager client = AWSSecretsManagerClientBuilder.standard().withRegion(region).build();
+		AWSSecretsManager client = AWSSecretsManagerClientBuilder.standard()
+				.withCredentials(new DefaultAWSCredentialsProviderChain()).withRegion(region).build();
 
 		String secret = null;
 		String decodedBinarySecret = null;

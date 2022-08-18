@@ -118,7 +118,6 @@ public class TransferFileService {
 				e.printStackTrace();
 			}
 		}
-
 		if (targetSftpChannel != null) {
 			try {
 
@@ -132,7 +131,6 @@ public class TransferFileService {
 				e.printStackTrace();
 			}
 		}
-
 		if (ftpClient != null)
 			try {
 				ftpClient.abort();
@@ -177,7 +175,7 @@ public class TransferFileService {
 	private List<FileInfo> getSourceFiles(FittleFileConfigEntity fileConfig) throws IOException {
 
 		String sourceProtocol = fileConfig.getSourceServerProtocol();
-		String sourceCredentials = fileConfig.getSourceServerCredentials();
+		String sourceSystem = fileConfig.getSourceServerSystem();
 		String sourceHostName = fileConfig.getSourceServerHostName();
 		String sourcePath = fileConfig.getSourceFilePath();
 		String fileExtension = fileConfig.getFileExtension();
@@ -192,25 +190,21 @@ public class TransferFileService {
 
 				if (sourceProtocol.equals(TransferFilesConstant.S3_PROTOCOL)) {
 
-					s3Client = new S3Config().getS3Config(sourceCredentials);
+					s3Client = new S3Config().getS3Config(sourceSystem);
 
 					sourceFilesList = s3Operations.getS3SourceFileList(s3Client, sourceHostName, sourcePath,
 							fileExtension);
 
-				}
+				} else if (sourceProtocol.equals(TransferFilesConstant.SFTP_PROTOCOL)) {
 
-				if (sourceProtocol.equals(TransferFilesConstant.SFTP_PROTOCOL)) {
-
-					sourceSftpChannel = sftpConfig.getSSHConnection(new JSch(), sourceCredentials, sourceHostName);
+					sourceSftpChannel = sftpConfig.getSSHConnection(new JSch(), sourceSystem, sourceHostName);
 
 					sourceFilesList = sftpOperations.getSftpSourceFileList(sourceSftpChannel, sourcePath,
 							fileExtension);
 
-				}
+				} else if (sourceProtocol.equals(TransferFilesConstant.FTPS_PROTOCOL)) {
 
-				if (sourceProtocol.equals(TransferFilesConstant.FTPS_PROTOCOL)) {
-
-					ftpClient = ftpConfig.getConnection(sourceCredentials, sourceHostName);
+					ftpClient = ftpConfig.getConnection(sourceSystem, sourceHostName);
 					sourceFilesList = ftpsOperations.getFtpsSourceFileList(ftpClient, sourcePath);
 				}
 
@@ -233,7 +227,7 @@ public class TransferFileService {
 			throws IOException {
 
 		String targetProtocol = fileConfig.getTargetServerProtocol();
-		String targetCredentials = fileConfig.getTargetServerCredentials();
+		String targetSystem = fileConfig.getTargetServerSystem();
 		String targetHostName = fileConfig.getTargetServerHostName();
 		String targetPath = fileConfig.getTargetFilePath();
 
@@ -247,22 +241,18 @@ public class TransferFileService {
 
 				if (targetProtocol.equals(TransferFilesConstant.S3_PROTOCOL)) {
 
-					s3Client = new S3Config().getS3Config(targetCredentials);
+					s3Client = new S3Config().getS3Config(targetSystem);
 					sentStatus = s3Operations.sendToS3(sourceFilesList, s3Client, targetHostName, targetPath);
 
-				}
+				} else if (targetProtocol.equals(TransferFilesConstant.SFTP_PROTOCOL)) {
 
-				if (targetProtocol.equals(TransferFilesConstant.SFTP_PROTOCOL)) {
-
-					targetSftpChannel = sftpConfig.getSSHConnection(new JSch(), targetCredentials, targetHostName);
+					targetSftpChannel = sftpConfig.getSSHConnection(new JSch(), targetSystem, targetHostName);
 
 					sentStatus = sftpOperations.sendToSftp(targetSftpChannel, sourceFilesList, targetPath);
 
-				}
+				} else if (targetProtocol.equals(TransferFilesConstant.FTPS_PROTOCOL)) {
 
-				if (targetProtocol.equals(TransferFilesConstant.FTPS_PROTOCOL)) {
-
-					ftpClient = ftpConfig.getConnection(targetCredentials, targetHostName);
+					ftpClient = ftpConfig.getConnection(targetSystem, targetHostName);
 					sentStatus = ftpsOperations.sendToFtps(sourceFilesList, ftpClient, targetPath);
 
 				}

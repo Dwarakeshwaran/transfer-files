@@ -24,11 +24,12 @@ public class SFTPServerConfig {
 	private static final Logger logger = LoggerFactory.getLogger(SFTPServerConfig.class);
 
 	@SuppressWarnings("unchecked")
-	public ChannelSftp getSSHConnection(JSch jsch, String credentials, String remoteHost) {
+	public ChannelSftp getSSHConnection(JSch jsch, String system, String remoteHost) {
 
-		logger.debug("Inside getSSHConnection method {} {} {}", jsch, credentials, remoteHost);
+		logger.debug("Inside getSSHConnection method {} {} {}", jsch, system, remoteHost);
 
-		String secret = getSecret(credentials);
+		String secret = getSecret(TransferFilesConstant.FITTLE_SECRET);
+
 		String username = null;
 		String keyString = null;
 
@@ -44,12 +45,12 @@ public class SFTPServerConfig {
 		try {
 
 			try (FileOutputStream outputStream = new FileOutputStream(
-					new File(TransferFilesConstant.TEMP_FOLDER_PATH + "key.pem"))) {
+					new File(TransferFilesConstant.TEMP_FOLDER_PATH + TransferFilesConstant.SFTP_KEY_NAME))) {
 
 				if (secretMap != null) {
 
-					username = secretMap.get("username");
-					keyString = secretMap.get("key");
+					username = secretMap.get(system + TransferFilesConstant.SFTP_USERNAME);
+					keyString = secretMap.get(system + TransferFilesConstant.SFTP_KEY);
 
 					byte[] keyBytes = keyString.getBytes();
 					outputStream.write(keyBytes);
@@ -61,7 +62,7 @@ public class SFTPServerConfig {
 			java.util.Properties config = new java.util.Properties();
 			config.put("StrictHostKeyChecking", "no");
 			jschSession.setConfig(config);
-			String privateKey = TransferFilesConstant.TEMP_FOLDER_PATH + "key.pem";
+			String privateKey = TransferFilesConstant.TEMP_FOLDER_PATH + TransferFilesConstant.SFTP_KEY_NAME;
 
 			jsch.addIdentity(privateKey);
 

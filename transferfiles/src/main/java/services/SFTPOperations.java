@@ -40,61 +40,66 @@ public class SFTPOperations {
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public List<FileInfo> getSftpSourceFileList(ChannelSftp channelSftp, String sftpPath, String fileExtension) {
+	public List<FileInfo> getSftpSourceFileList(ChannelSftp sftpChannel, String sftpPath, String fileExtension) {
 
-		logger.debug("Inside getSftpSourceFileList method {} {}", channelSftp, sftpPath);
+		logger.debug("Inside getSftpSourceFileList method {} {}", sftpChannel, sftpPath);
 
 		List<FileInfo> fileList = new ArrayList<>();
 
-		/*
-		 * 1. Download all the files from SFTP sftp Path to Lambda's /tmp/ Folder
-		 */
+		if (sftpChannel != null) {
 
-		List<ChannelSftp.LsEntry> sftpFiles = new ArrayList();
-		try {
-			channelSftp.connect();
-			sftpFiles = channelSftp.ls(sftpPath);
+			/*
+			 * 1. Download all the files from SFTP sftp Path to Lambda's /tmp/ Folder
+			 */
 
-		} catch (SftpException | JSchException e) {
-			logger.error("Error While Downloading Folder to /tmp/ folder of Lambda");
-			e.printStackTrace();
-		}
+			List<ChannelSftp.LsEntry> sftpFiles = new ArrayList();
+			try {
+				sftpChannel.connect();
+				sftpFiles = sftpChannel.ls(sftpPath);
 
-		/*
-		 * 2. Read the file names from the /tmp/ folder in Lambda and get all the files
-		 * in a File Object and store it in FileInfo list object.
-		 */
-
-		for (ChannelSftp.LsEntry sftpFile : sftpFiles) {
-
-			if (sftpFile.getFilename().contains(fileExtension)) {
-
-				FileInfo fileInfo = new FileInfo();
-
-				try {
-
-					String fileName = sftpFile.getFilename();
-					channelSftp.get(sftpPath + fileName, TransferFilesConstant.TEMP_FOLDER_PATH);
-					logger.info("File {}{} downloaded to {}", sftpPath, fileName,
-							TransferFilesConstant.TEMP_FOLDER_PATH);
-
-					fileInfo.setFileName(fileName);
-					fileInfo.setProcessingStartTimestamp(new Timestamp(System.currentTimeMillis()));
-					fileInfo.setModifiedDate(getDate(sftpFile.getAttrs().getMTime()));
-					fileInfo.setFile(new File(TransferFilesConstant.TEMP_FOLDER_PATH + fileName));
-					logger.info("File Info {}", fileInfo);
-
-					fileList.add(fileInfo);
-
-				} catch (SftpException ioException) {
-
-					logger.error(
-							"Error occurred while downloading files from SFTP Server to Lamda's /tmp/ folder Exception {}",
-							ioException.getLocalizedMessage());
-				}
+			} catch (SftpException | JSchException e) {
+				logger.error("Error While Downloading Folder to /tmp/ folder of Lambda");
+				e.printStackTrace();
 			}
 
-		}
+			/*
+			 * 2. Read the file names from the /tmp/ folder in Lambda and get all the files
+			 * in a File Object and store it in FileInfo list object.
+			 */
+
+			for (ChannelSftp.LsEntry sftpFile : sftpFiles) {
+
+				if (sftpFile.getFilename().contains(fileExtension)) {
+
+					FileInfo fileInfo = new FileInfo();
+
+					try {
+
+						String fileName = sftpFile.getFilename();
+						sftpChannel.get(sftpPath + fileName, TransferFilesConstant.TEMP_FOLDER_PATH);
+						logger.info("File {}{} downloaded to {}", sftpPath, fileName,
+								TransferFilesConstant.TEMP_FOLDER_PATH);
+
+						fileInfo.setFileName(fileName);
+						fileInfo.setProcessingStartTimestamp(new Timestamp(System.currentTimeMillis()));
+						fileInfo.setModifiedDate(getDate(sftpFile.getAttrs().getMTime()));
+						fileInfo.setFile(new File(TransferFilesConstant.TEMP_FOLDER_PATH + fileName));
+						logger.info("File Info {}", fileInfo);
+
+						fileList.add(fileInfo);
+
+					} catch (SftpException ioException) {
+
+						logger.error(
+								"Error occurred while downloading files from SFTP Server to Lamda's /tmp/ folder Exception {}",
+								ioException.getLocalizedMessage());
+					}
+				}
+
+			}
+
+		} else
+			logger.error("sftpChannel in getSftpSourceFileList is null");
 
 		return fileList;
 
@@ -106,60 +111,71 @@ public class SFTPOperations {
 
 		int flag = 0;
 
-		for (FileInfo fileInfo : sftpFileList) {
+		if (sftpChannel != null) {
 
-			try {
+			for (FileInfo fileInfo : sftpFileList) {
 
-				if (fileInfo.getFileTransferStatus().equals(TransferFilesConstant.TRANSFER_SUCCESS)) {
-					sftpChannel.put(fileInfo.getFile().getPath(), sftpArchivePath + fileInfo.getFileName());
-					fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
-					fileInfo.setSourceFileArchivalStatus(TransferFilesConstant.TRANSFER_SUCCESS);
-					logger.info("{} Archived to {}", fileInfo.getFileName(), sftpArchivePath);
-				} else {
+				try {
+
+					if (fileInfo.getFileTransferStatus().equals(TransferFilesConstant.TRANSFER_SUCCESS)) {
+						sftpChannel.put(fileInfo.getFile().getPath(), sftpArchivePath + fileInfo.getFileName());
+						fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
+						fileInfo.setSourceFileArchivalStatus(TransferFilesConstant.TRANSFER_SUCCESS);
+						logger.info("{} Archived to {}", fileInfo.getFileName(), sftpArchivePath);
+					} else {
+						flag = 1;
+						fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
+						fileInfo.setSourceFileArchivalStatus(TransferFilesConstant.TRANSFER_FAILED);
+						logger.error("{} is not uploaded to Destination, the file tranfer status is failed",
+								fileInfo.getFileName());
+					}
+
+				} catch (Exception e) {
 					flag = 1;
 					fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
 					fileInfo.setSourceFileArchivalStatus(TransferFilesConstant.TRANSFER_FAILED);
-					logger.error("{} is not uploaded to Destination, the file tranfer status is failed",
-							fileInfo.getFileName());
+					logger.error("Error occurred while archiving file to SFTP Server {}", e.getMessage());
 				}
-
-			} catch (Exception e) {
-				flag = 1;
-				fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
-				fileInfo.setSourceFileArchivalStatus(TransferFilesConstant.TRANSFER_FAILED);
-				logger.error("Error occurred while archiving file to SFTP Server {}", e.getMessage());
 			}
+
+		} else {
+			flag = 1;
+			logger.error("sftpChannel in archiveSftpFiles is null");
 		}
 
 		return flag == 0;
 	}
 
-	public void deleteSftpFiles(ChannelSftp sourceSftpChannel, String sftpPath, List<FileInfo> sftpFilesList) {
+	public void deleteSftpFiles(ChannelSftp sftpChannel, String sftpPath, List<FileInfo> sftpFilesList) {
 
-		logger.debug("Inside deleteSftpFiles method: {} {} {}", sourceSftpChannel, sftpPath, sftpFilesList);
+		logger.debug("Inside deleteSftpFiles method: {} {} {}", sftpChannel, sftpPath, sftpFilesList);
 
-		for (FileInfo fileInfo : sftpFilesList) {
+		if (sftpChannel != null) {
 
-			try {
+			for (FileInfo fileInfo : sftpFilesList) {
 
-				if (fileInfo.getSourceFileArchivalStatus().equals(TransferFilesConstant.TRANSFER_SUCCESS)) {
-					sourceSftpChannel.rm(sftpPath + fileInfo.getFileName());
-					fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
-					fileInfo.setSourceFileDeletionStatus(TransferFilesConstant.TRANSFER_SUCCESS);
-					logger.info("{}{} Deleted", sftpPath, fileInfo.getFileName());
-				} else {
+				try {
+
+					if (fileInfo.getSourceFileArchivalStatus().equals(TransferFilesConstant.TRANSFER_SUCCESS)) {
+						sftpChannel.rm(sftpPath + fileInfo.getFileName());
+						fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
+						fileInfo.setSourceFileDeletionStatus(TransferFilesConstant.TRANSFER_SUCCESS);
+						logger.info("{}{} Deleted", sftpPath, fileInfo.getFileName());
+					} else {
+						fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
+						fileInfo.setSourceFileDeletionStatus(TransferFilesConstant.TRANSFER_FAILED);
+						logger.error("{} is not yet Archived, the archival status is failed", fileInfo.getFileName());
+					}
+
+				} catch (Exception e) {
 					fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
 					fileInfo.setSourceFileDeletionStatus(TransferFilesConstant.TRANSFER_FAILED);
-					logger.error("{} is not yet Archived, the archival status is failed", fileInfo.getFileName());
+					logger.error("Error occurred while deleting file from SFTP Server {}", e.getMessage());
 				}
 
-			} catch (Exception e) {
-				fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
-				fileInfo.setSourceFileDeletionStatus(TransferFilesConstant.TRANSFER_FAILED);
-				logger.error("Error occurred while deleting file from SFTP Server {}", e.getMessage());
 			}
-
-		}
+		} else
+			logger.error("sftpChannel in deleteSftpFiles is null");
 
 	}
 
@@ -169,27 +185,34 @@ public class SFTPOperations {
 
 		int flag = 0;
 
-		try {
-			sftpChannel.connect();
-		} catch (JSchException e) {
-			logger.error("Error While connecting to SFTP Channel");
-			e.printStackTrace();
-		}
+		if (sftpChannel != null) {
 
-		for (FileInfo fileInfo : sftpFileList) {
 			try {
-
-				sftpChannel.put(fileInfo.getFile().getPath(), sftpPath + fileInfo.getFileName());
-				fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
-				fileInfo.setFileTransferStatus(TransferFilesConstant.TRANSFER_SUCCESS);
-				logger.info("{} Uploaded to {}", fileInfo.getFileName(), sftpPath);
-
-			} catch (Exception e) {
-				flag = 1;
-				fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
-				fileInfo.setFileTransferStatus(TransferFilesConstant.TRANSFER_FAILED);
-				logger.error("Error occurred while sending file to SFTP Server {}", e.getMessage());
+				sftpChannel.connect();
+			} catch (JSchException e) {
+				logger.error("Error While connecting to SFTP Channel");
+				e.printStackTrace();
 			}
+
+			for (FileInfo fileInfo : sftpFileList) {
+				try {
+
+					sftpChannel.put(fileInfo.getFile().getPath(), sftpPath + fileInfo.getFileName());
+					fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
+					fileInfo.setFileTransferStatus(TransferFilesConstant.TRANSFER_SUCCESS);
+					logger.info("{} Uploaded to {}", fileInfo.getFileName(), sftpPath);
+
+				} catch (Exception e) {
+					flag = 1;
+					fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
+					fileInfo.setFileTransferStatus(TransferFilesConstant.TRANSFER_FAILED);
+					logger.error("Error occurred while sending file to SFTP Server {}", e.getMessage());
+				}
+			}
+
+		} else {
+			flag = 1;
+			logger.error("sftpChannel is null");
 		}
 
 		return flag == 0;
