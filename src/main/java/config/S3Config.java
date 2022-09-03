@@ -1,17 +1,20 @@
 package config;
 
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 
+import utils.TransferFilesConstant;
+
 public class S3Config {
 
-	public AmazonS3 getS3Config(String credentials) {
+	public AmazonS3 getS3Config(String system) {
 
-		if (credentials.equals("internal"))
+		String region = System.getenv(TransferFilesConstant.REGION);
+
+		if (system.equals(TransferFilesConstant.INTERNAL_SYSTEM))
 			return AmazonS3ClientBuilder.standard().withCredentials(new DefaultAWSCredentialsProviderChain())
-					.withRegion(Regions.US_EAST_1).build();
+					.withRegion(region).build();
 		else
 			return null;
 

@@ -4,8 +4,13 @@ public class TransferFilesConstant {
 
 	private TransferFilesConstant() {
 	}
-
+	
+	public static final String ENV = "Environment";
+	public static final String REGION = "Region";
+	
 	public static final String S3_PROTOCOL = "S3";
+
+	public static final String INTERNAL_SYSTEM = "Fittle";
 	public static final String SFTP_PROTOCOL = "SFTP";
 	public static final String FTPS_PROTOCOL = "FTPS";
 

@@ -1,0 +1,16 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: openjdk8
+  build:
+    commands:
+      - mvn package
+      - sam package
+        --template-file transfer-files-dev-config.yml
+        --s3-bucket dev-dwaki-codepipeline-artifacts-s3
+        --output-template-file packaged-template.yml
+artifacts:
+  files:
+    - packaged-template.yml

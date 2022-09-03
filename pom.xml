@@ -117,7 +117,7 @@
 	</dependencyManagement>
 
 	<build>
-		<finalName>transform-kafka-data</finalName>
+		<finalName>transfer-files</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

@@ -105,7 +105,7 @@ public class FittleEntityManagerFactory {
 
 		logger.debug("Inside getSecret method {}", secretName);
 
-		String region = "us-east-1";
+		String region = System.getenv(TransferFilesConstant.REGION);
 
 		AWSSecretsManager client = AWSSecretsManagerClientBuilder.standard()
 				.withCredentials(new DefaultAWSCredentialsProviderChain()).withRegion(region).build();

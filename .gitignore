@@ -1,3 +1,2 @@
-#keys
-transferfiles/key.ppk
-
+/target/
+.aws-sam/

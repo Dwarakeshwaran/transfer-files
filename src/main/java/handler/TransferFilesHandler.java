@@ -30,7 +30,7 @@ public class TransferFilesHandler implements RequestHandler<Map<String, String>,
 		 */
 		
 
-		String jobId = "personal-sftp-to-fittle-sftp";
+		String jobId = "fittle-s3-to-fittle-sftp";
 
 		EntityManager entityManager = getEntityManager();
 

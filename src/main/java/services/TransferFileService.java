@@ -68,40 +68,40 @@ public class TransferFileService {
 		 */
 
 		if (sourceFilesList != null) {
-			if (!sourceFilesList.isEmpty())
+			if (!sourceFilesList.isEmpty()) {
 				sendSourceFiles(fileConfig, sourceFilesList);
-			else
+
+				/*
+				 * 3. Archive files in the Archival location
+				 */
+				archiveFiles(fileConfig, sourceFilesList);
+
+				/*
+				 * 4. If Archival Done successfully, delete the files from the source location
+				 */
+				String deleteAfterSuccess = fileConfig.getDeleteAfterSuccess();
+
+				if (deleteAfterSuccess.equals("Y"))
+					deleteSourceFiles(fileConfig, sourceFilesList);
+
+				/*
+				 * 5. Delete files in the Lambda's /tmp/ folder to free up Lamda's memory and
+				 * Close the server
+				 */
+
+				cleanTempFolder(TransferFilesConstant.TEMP_FOLDER_PATH);
+
+				disconnectSessions(sourceSftpChannel, targetSftpChannel, ftpClient);
+
+				for (FileInfo file : sourceFilesList)
+					logger.info("File Info {}", file);
+
+				storeDataInAuditTable(sourceFilesList, entityManager);
+
+			} else
 				logger.error("Source File List is Empty");
 		} else
 			logger.error("Source File is Null");
-
-		/*
-		 * 3. Archive files in the Archival location
-		 */
-
-		archiveFiles(fileConfig, sourceFilesList);
-
-		/*
-		 * 4. If Archival Done successfully, delete the files from the source location
-		 */
-		String deleteAfterSuccess = fileConfig.getDeleteAfterSuccess();
-
-		if (deleteAfterSuccess.equals("Y"))
-			deleteSourceFiles(fileConfig, sourceFilesList);
-
-		/*
-		 * 5. Delete files in the Lambda's /tmp/ folder to free up Lamda's memory and
-		 * Close the server
-		 */
-
-		cleanTempFolder(TransferFilesConstant.TEMP_FOLDER_PATH);
-
-		disconnectSessions(sourceSftpChannel, targetSftpChannel, ftpClient);
-
-		for (FileInfo file : sourceFilesList)
-			logger.info("File Info {}", file);
-
-		storeDataInAuditTable(sourceFilesList, entityManager);
 
 	}
 

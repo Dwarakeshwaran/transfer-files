@@ -5,7 +5,7 @@
   <artifactId>tranferfiles</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <build>
-    <finalName>transform-kafka-data</finalName>
+    <finalName>transfer-files</finalName>
     <plugins>
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>

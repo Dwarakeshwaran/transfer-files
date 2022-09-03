@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  TransferFiles:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: "sam-transfer-files"
+      Description: "Lambda Function for Transferring files from Source System to Destination System"
+      Handler: "handler.TransferFilesHandler::handleRequest"
+      CodeUri: "."
+      Runtime: java8
+      Role: "arn:aws:iam::676232662338:role/DevopsFullAccess"
+      MemorySize: 512
+      Timeout: 120
+      Tracing: Active
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-06a5fe7a2a4b1493e
+        SubnetIds:
+          - subnet-0c400bfec0f49d9e4
+          - subnet-0b9e6c788c29be3ae
+      Environment:
+        Variables:
+          Region: us-east-1
+          DatabaseUrl: jdbc:postgresql://fittle-db.czivym8uhcuy.us-east-1.rds.amazonaws.com:5432/postgres
