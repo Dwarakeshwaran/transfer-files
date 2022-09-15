@@ -1,6 +1,8 @@
 package services;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -8,6 +10,8 @@ import java.nio.file.StandardCopyOption;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -144,6 +148,9 @@ public class S3Operations {
 				PutObjectRequest request = new PutObjectRequest(s3BucketName, key, fileInfo.getFile());
 				s3Client.putObject(request);
 
+				if (key.contains(".zip"))
+					unZipFile(fileInfo, s3Client, s3BucketName, s3Path);
+
 				fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
 				fileInfo.setFileTransferStatus(TransferFilesConstant.TRANSFER_SUCCESS);
 
@@ -153,13 +160,57 @@ public class S3Operations {
 				flag = 1;
 				fileInfo.setProcessingEndTimestamp(new Timestamp(System.currentTimeMillis()));
 				fileInfo.setFileTransferStatus(TransferFilesConstant.TRANSFER_FAILED);
-				logger.error("Error while uploading file {} to AWS S3 Bucket {}", key, s3BucketName);
+				logger.error("Error while uploading file {} to AWS S3 Bucket {} {}", key, s3BucketName, e);
 
 			}
 
 		}
 
 		return flag == 0;
+
+	}
+
+	private void unZipFile(FileInfo fileInfo, AmazonS3 s3Client, String s3BucketName, String s3Path)
+			throws IOException {
+
+		logger.debug("Inside unZipFile method {} {} {} {}", fileInfo, s3Client, s3BucketName, s3Path);
+
+		// Uncompress the Zip file
+
+		try (ZipInputStream zis = new ZipInputStream(new FileInputStream(fileInfo.getFile()))) {
+			ZipEntry zipEntry = zis.getNextEntry();
+
+			while (zipEntry != null) {
+
+				File file = new File(TransferFilesConstant.TEMP_FOLDER_PATH + zipEntry.getName());
+
+				try (FileOutputStream fos = new FileOutputStream(file)) {
+					int length;
+					byte[] buffer = new byte[1024];
+					while ((length = zis.read(buffer)) > 0)
+						fos.write(buffer, 0, length);
+
+				}
+
+				String key = s3Path + file.getName();
+				PutObjectRequest request = new PutObjectRequest(s3BucketName, key, file);
+				s3Client.putObject(request);
+
+				logger.info("{} Uploaded to S3", file.getName());
+				zipEntry = zis.getNextEntry();
+
+			}
+
+			zis.closeEntry();
+
+		}
+
+		String key = s3Path + fileInfo.getFileName();
+
+		DeleteObjectRequest deleteObjectRequest = new DeleteObjectRequest(s3BucketName, key);
+		s3Client.deleteObject(deleteObjectRequest);
+
+		logger.info("{} Deleted", key);
 
 	}
 

@@ -10,7 +10,7 @@ public class S3Config {
 
 	public AmazonS3 getS3Config(String system) {
 
-		String region = System.getenv(TransferFilesConstant.REGION);
+		String region = "us-east-1";
 
 		if (system.equals(TransferFilesConstant.INTERNAL_SYSTEM))
 			return AmazonS3ClientBuilder.standard().withCredentials(new DefaultAWSCredentialsProviderChain())
